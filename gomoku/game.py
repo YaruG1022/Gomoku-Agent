@@ -14,10 +14,10 @@ class Game:
 
     def __init__(self) -> None:
         self.board: Board = Board()
-        self.current_player: int = BLACK  # BLACK always moves first
-        self.winner: int = EMPTY          # EMPTY means no winner yet
-        self.move_history: list[tuple[int, int]] = []
-        self._game_over: bool = False
+        self.current_player: int = BLACK  # BLACK always moves first per Gomoku rules
+        self.winner: int = EMPTY          # EMPTY means no winner yet (also used for draws)
+        self.move_history: list[tuple[int, int]] = []  # stack of (row, col) for undo support
+        self._game_over: bool = False      # set True on win or draw; blocks further moves
 
     # ------------------------------------------------------------------
     # Core actions
@@ -31,19 +31,20 @@ class Game:
         """
         if self._game_over:
             return False
-        if not self.board.is_valid_move(row, col):
+        if not self.board.is_valid_move(row, col):  # rejects out-of-bounds or occupied cells
             return False
 
         self.board.place_stone(row, col, self.current_player)
-        self.move_history.append((row, col))
+        self.move_history.append((row, col))  # record before win check so undo stays consistent
 
         if self.board.check_win(row, col, self.current_player):
+            # Only need to check the stone just placed — earlier stones were already checked
             self.winner = self.current_player
             self._game_over = True
         elif self.board.is_full():
             self._game_over = True  # draw — winner stays EMPTY
         else:
-            self._switch_player()
+            self._switch_player()  # advance turn only when the game continues
 
         return True
 
@@ -58,10 +59,12 @@ class Game:
         row, col = self.move_history.pop()
         self.board.remove_stone(row, col)
 
-        # Restore state flags
+        # Always clear game-over and winner: the position before this move
+        # may no longer be terminal (e.g., undoing a winning move).
         self._game_over = False
         self.winner = EMPTY
-        self._switch_player()  # back to whoever just played
+        # Switch back to whoever just played — their stone was just removed
+        self._switch_player()
 
         return True
 
@@ -91,6 +94,7 @@ class Game:
     # ------------------------------------------------------------------
 
     def _switch_player(self) -> None:
+        # Toggle between the two players; called after each move and on undo
         self.current_player = WHITE if self.current_player == BLACK else BLACK
 
     def __repr__(self) -> str:  # pragma: no cover
