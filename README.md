@@ -45,6 +45,10 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Controls: left click to place a stone, `R` to restart, `U` to undo the last full turn.
+
+The current local UI uses `pygame` for a native desktop window. The built-in AI is a minimal opponent that prefers immediate wins, blocks immediate losses, and otherwise plays near the center. This keeps the project playable while the full search and heuristic modules are still under development.
+
 ## Running Tests
 
 ```bash

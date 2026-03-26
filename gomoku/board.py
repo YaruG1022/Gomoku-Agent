@@ -43,10 +43,10 @@ class Board:
         if self.grid[row][col] != EMPTY:
             raise ValueError(f"Cell ({row}, {col}) is already occupied.")
         self.grid[row][col] = player
-        self.stone_count += 1
+        self.stone_count += 1  # track count to make is_full() O(1)
 
     def remove_stone(self, row: int, col: int) -> None:
-        """Remove the stone at (row, col) — used by search to undo moves."""
+        """Remove the stone at (row, col) — used by search/undo to revert moves."""
         if not self.in_bounds(row, col):
             raise ValueError(f"Position ({row}, {col}) is out of bounds.")
         if self.grid[row][col] == EMPTY:
@@ -90,11 +90,11 @@ class Board:
         This should be called immediately *after* placing a stone at
         (row, col) so that grid[row][col] == player.
         """
-        # Four axis directions: horizontal, vertical, diagonal, anti-diagonal
+        # Check all four axes; each direction covers both halves of that line
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
 
         for dr, dc in directions:
-            count = 1  # the stone just placed
+            count = 1  # start at 1 to include the stone just placed
 
             # Walk in the positive direction along this axis.
             r, c = row + dr, col + dc
@@ -103,14 +103,14 @@ class Board:
                 r += dr
                 c += dc
 
-            # Walk in the negative direction along the same axis.
+            # Walk in the negative (opposite) direction along the same axis.
             r, c = row - dr, col - dc
             while self.in_bounds(r, c) and self.grid[r][c] == player:
                 count += 1
                 r -= dr
                 c -= dc
 
-            if count >= 5:
+            if count >= 5:  # standard Gomoku: 5 or more in a row wins
                 return True
 
         return False
