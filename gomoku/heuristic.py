@@ -55,7 +55,7 @@ _PATTERN_TABLE: tuple[tuple[str, tuple[str, ...]], ...] = (
             "x_x_x",                      # double-gap three
         ),
     ),
-    # Open two (活二)
+    # Open two
     (
         "open_two",
         (
@@ -63,7 +63,7 @@ _PATTERN_TABLE: tuple[tuple[str, tuple[str, ...]], ...] = (
             "_x_x_",                      # jump two, both open
         ),
     ),
-    # Sleep two (眠二)
+    # Sleep two
     (
         "sleep_two",
         (
