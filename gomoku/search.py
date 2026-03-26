@@ -19,57 +19,6 @@ def _board_has_five(board: Board, player: int) -> bool:
     return False
 
 
-def _simple_fallback_evaluate(board: Board, player: int) -> float:
-    opponent = _opponent(player)
-    directions = ((0, 1), (1, 0), (1, 1), (1, -1))
-
-    def score_for(target: int) -> float:
-        total = 0.0
-        for row in range(board.size):
-            for col in range(board.size):
-                if board.grid[row][col] != target:
-                    continue
-                for dr, dc in directions:
-                    prev_row = row - dr
-                    prev_col = col - dc
-                    if board.in_bounds(prev_row, prev_col) and board.grid[prev_row][prev_col] == target:
-                        continue
-
-                    run = 0
-                    next_row, next_col = row, col
-                    while board.in_bounds(next_row, next_col) and board.grid[next_row][next_col] == target:
-                        run += 1
-                        next_row += dr
-                        next_col += dc
-
-                    open_ends = 0
-                    if board.in_bounds(prev_row, prev_col) and board.grid[prev_row][prev_col] == 0:
-                        open_ends += 1
-                    if board.in_bounds(next_row, next_col) and board.grid[next_row][next_col] == 0:
-                        open_ends += 1
-
-                    if run >= 5:
-                        total += WIN_SCORE
-                    elif run == 4:
-                        total += 15_000 if open_ends == 2 else 4_000
-                    elif run == 3:
-                        total += 1_500 if open_ends == 2 else 400
-                    elif run == 2:
-                        total += 150 if open_ends == 2 else 40
-                    elif run == 1:
-                        total += 10
-        return total
-
-    return score_for(player) - score_for(opponent)
-
-
-def _safe_evaluate(board: Board, player: int) -> float:
-    try:
-        return float(evaluate(board, player))
-    except NotImplementedError:
-        return _simple_fallback_evaluate(board, player)
-
-
 def minimax(
     board: Board,
     depth: int,
@@ -84,12 +33,12 @@ def minimax(
     if _board_has_five(board, opponent):
         return int(-WIN_SCORE - depth), None
     if depth == 0 or board.is_full():
-        return int(_safe_evaluate(board, player)), None
+        return int(evaluate(board, player)), None
 
     current = player if maximizing_player else opponent
     candidates = get_candidate_moves(board)
     if not candidates:
-        return int(_safe_evaluate(board, player)), None
+        return int(evaluate(board, player)), None
 
     best_move: Optional[tuple[int, int]] = None
     if maximizing_player:
@@ -130,12 +79,12 @@ def alphabeta(
     if _board_has_five(board, opponent):
         return -WIN_SCORE - depth, None
     if depth == 0 or board.is_full():
-        return _safe_evaluate(board, player), None
+        return evaluate(board, player), None
 
     current = player if maximizing_player else opponent
     candidates = get_candidate_moves(board)
     if not candidates:
-        return _safe_evaluate(board, player), None
+        return evaluate(board, player), None
 
     best_move: Optional[tuple[int, int]] = None
 
