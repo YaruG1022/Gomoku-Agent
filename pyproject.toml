@@ -9,6 +9,7 @@ description = "Gomoku (Five-in-a-Row) game-playing agent with Minimax + Alpha-Be
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=2.2.3",
+    "pygame>=2.6.1",
 ]
 
 [project.scripts]
