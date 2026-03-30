@@ -6,13 +6,25 @@ def get_candidate_moves(
     board: Board,
     radius: int = 2,
 ) -> list[tuple[int, int]]:
-    """Return a list of candidate (row, col) moves worth considering.
+    occupied_cells = [
+        (row, col)
+        for row in range(board.size)
+        for col in range(board.size)
+        if board.grid[row][col] != EMPTY
+    ]
 
-    Instead of returning every empty cell, only cells within *radius*
-    squares of an already-placed stone are returned.  This dramatically
-    reduces the branching factor without missing strong moves.
+    if not occupied_cells:
+        center = board.size // 2
+        return [(center, center)]
 
-    Falls back to the centre cell when the board is completely empty.
+    candidates: set[tuple[int, int]] = set()
+    for row, col in occupied_cells:
+        for row_offset in range(-radius, radius + 1):
+            for col_offset in range(-radius, radius + 1):
+                next_row = row + row_offset
+                next_col = col + col_offset
+                if board.is_valid_move(next_row, next_col):
+                    candidates.add((next_row, next_col))
 
     Parameters
     ----------
