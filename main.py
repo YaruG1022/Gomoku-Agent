@@ -7,7 +7,9 @@ import pygame
 
 from gomoku.board import BLACK, EMPTY, WHITE
 from gomoku.game import Game
-from gomoku.move_gen import get_candidate_moves
+from gomoku.search import alphabeta
+
+AI_DEPTH = 3
 
 WINDOW_SIZE = 760
 GRID_MARGIN = 60
@@ -20,37 +22,25 @@ BLACK_STONE_COLOR = (30, 30, 30)
 WHITE_STONE_COLOR = (243, 243, 243)
 HIGHLIGHT_COLOR = (188, 61, 44)
 TEXT_COLOR = (32, 32, 32)
+BUTTON_COLOR = (170, 140, 100)
+BUTTON_HOVER_COLOR = (190, 160, 120)
+BUTTON_TEXT_COLOR = (255, 255, 255)
 
 
 def choose_ai_move(game: Game, ai_player: int) -> Optional[tuple[int, int]]:
-    candidates = get_candidate_moves(game.board)
-    if not candidates:
-        return None
-
-    opponent = BLACK if ai_player == WHITE else WHITE
-
-    for row, col in candidates:
-        game.board.place_stone(row, col, ai_player)
-        is_winning_move = game.board.check_win(row, col, ai_player)
-        game.board.remove_stone(row, col)
-        if is_winning_move:
-            return (row, col)
-
-    for row, col in candidates:
-        game.board.place_stone(row, col, opponent)
-        must_block = game.board.check_win(row, col, opponent)
-        game.board.remove_stone(row, col)
-        if must_block:
-            return (row, col)
-
-    center = game.board.size // 2
-    return min(
-        candidates,
-        key=lambda move: (abs(move[0] - center) + abs(move[1] - center), move[0], move[1]),
+    """Use alpha-beta search to pick the best move for *ai_player*."""
+    _, move = alphabeta(
+        game.board,
+        depth=AI_DEPTH,
+        alpha=float("-inf"),
+        beta=float("inf"),
+        maximizing_player=True,
+        player=ai_player,
     )
+    return move
 
 
-def draw_board(screen: pygame.Surface, game: Game, font: pygame.font.Font) -> None:
+def draw_board(screen: pygame.Surface, game: Game, font: pygame.font.Font) -> tuple[pygame.Rect, pygame.Rect]:
     screen.fill(BACKGROUND_COLOR)
     board_rect = pygame.Rect(0, 0, WINDOW_SIZE, WINDOW_SIZE)
     pygame.draw.rect(screen, BOARD_COLOR, board_rect)
@@ -85,17 +75,29 @@ def draw_board(screen: pygame.Surface, game: Game, font: pygame.font.Font) -> No
 
     if game.is_over():
         if game.get_winner() == EMPTY:
-            status_text = "Draw. Press R to restart."
+            status_text = "Draw."
         elif game.get_winner() == BLACK:
-            status_text = "Black wins. Press R to restart."
+            status_text = "Black wins!"
         else:
-            status_text = "White wins. Press R to restart."
+            status_text = "White wins!"
     else:
         player_name = "Black" if game.current_player == BLACK else "White"
-        status_text = f"Turn: {player_name}. R: restart, U: undo"
+        status_text = f"Turn: {player_name}"
 
     text_surface = font.render(status_text, True, TEXT_COLOR)
     screen.blit(text_surface, (24, status_top + 22))
+
+    mouse_pos = pygame.mouse.get_pos()
+    restart_btn = pygame.Rect(WINDOW_SIZE - 230, status_top + 16, 100, 40)
+    undo_btn = pygame.Rect(WINDOW_SIZE - 120, status_top + 16, 100, 40)
+
+    for btn, label in [(restart_btn, "Restart"), (undo_btn, "Undo")]:
+        color = BUTTON_HOVER_COLOR if btn.collidepoint(mouse_pos) else BUTTON_COLOR
+        pygame.draw.rect(screen, color, btn, border_radius=6)
+        btn_text = font.render(label, True, BUTTON_TEXT_COLOR)
+        screen.blit(btn_text, btn_text.get_rect(center=btn.center))
+
+    return restart_btn, undo_btn
 
 
 def screen_to_move(position: tuple[int, int], board_size: int) -> Optional[tuple[int, int]]:
@@ -124,6 +126,9 @@ def main() -> None:
     human_player = BLACK
     ai_player = WHITE
 
+    restart_btn = pygame.Rect(WINDOW_SIZE - 230, WINDOW_SIZE + 16, 100, 40)
+    undo_btn = pygame.Rect(WINDOW_SIZE - 120, WINDOW_SIZE + 16, 100, 40)
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -131,30 +136,33 @@ def main() -> None:
                 sys.exit(0)
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
+                if event.key in (pygame.K_r, pygame.K_ESCAPE):
                     game.reset()
-                elif event.key == pygame.K_u:
+                elif event.key in (pygame.K_u, pygame.K_BACKSPACE):
                     if game.move_history:
                         game.undo_move()
                     if game.move_history and game.current_player == ai_player:
                         game.undo_move()
 
-            if (
-                event.type == pygame.MOUSEBUTTONDOWN
-                and event.button == 1
-                and not game.is_over()
-                and game.current_player == human_player
-            ):
-                move = screen_to_move(event.pos, game.board.size)
-                if move is not None:
-                    game.make_move(*move)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if restart_btn.collidepoint(event.pos):
+                    game.reset()
+                elif undo_btn.collidepoint(event.pos):
+                    if game.move_history:
+                        game.undo_move()
+                    if game.move_history and game.current_player == ai_player:
+                        game.undo_move()
+                elif not game.is_over() and game.current_player == human_player:
+                    move = screen_to_move(event.pos, game.board.size)
+                    if move is not None:
+                        game.make_move(*move)
 
         if not game.is_over() and game.current_player == ai_player:
             ai_move = choose_ai_move(game, ai_player)
             if ai_move is not None:
                 game.make_move(*ai_move)
 
-        draw_board(screen, game, font)
+        restart_btn, undo_btn = draw_board(screen, game, font)
         pygame.display.flip()
         clock.tick(60)
 
