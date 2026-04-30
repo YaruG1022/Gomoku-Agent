@@ -7,7 +7,7 @@ WIN_SCORE = 1_000_000
 # ---------------------------------------------------------------------------
 # Pattern-type weights
 # ---------------------------------------------------------------------------
-_WEIGHTS: dict[str, int] = {
+_DEFAULT_WEIGHTS: dict[str, int] = {
     "five": WIN_SCORE,
     "open_four": 100_000,   # both ends open, unstoppable
     "rush_four": 8_000,     # one completion point, must respond
@@ -16,6 +16,26 @@ _WEIGHTS: dict[str, int] = {
     "open_two": 100,        # room to grow
     "sleep_two": 15,        # limited growth
 }
+
+# Active weights — starts as a copy of defaults; can be overridden at runtime.
+_WEIGHTS: dict[str, int] = dict(_DEFAULT_WEIGHTS)
+
+
+def get_weights() -> dict[str, int]:
+    """Return a copy of the current active weights."""
+    return dict(_WEIGHTS)
+
+
+def set_weights(overrides: dict[str, int]) -> None:
+    """Override active weights. Only keys present in *overrides* are changed."""
+    for k, v in overrides.items():
+        if k in _WEIGHTS:
+            _WEIGHTS[k] = v
+
+
+def reset_weights() -> None:
+    """Restore all weights to their defaults."""
+    _WEIGHTS.update(_DEFAULT_WEIGHTS)
 
 # ---------------------------------------------------------------------------
 # Pattern templates

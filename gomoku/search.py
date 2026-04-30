@@ -9,6 +9,27 @@ WIN_SCORE = 1_000_000.0
 # Maximum number of candidate moves evaluated per search node.
 MAX_CANDIDATES = 15
 
+# Global counters (reset before each top-level search call).
+_node_counter: int = 0
+_prune_counter: int = 0
+
+
+def get_node_count() -> int:
+    """Return the number of nodes explored in the last search call."""
+    return _node_counter
+
+
+def get_prune_count() -> int:
+    """Return the number of alpha-beta prune events in the last search call."""
+    return _prune_counter
+
+
+def reset_counters() -> None:
+    """Reset node and prune counters to zero."""
+    global _node_counter, _prune_counter
+    _node_counter = 0
+    _prune_counter = 0
+
 
 def _opponent(player: int) -> int:
     """Return the opponent of *player*."""
@@ -139,6 +160,9 @@ def alphabeta(
 
     Returns (score, best_move).
     """
+    global _node_counter, _prune_counter
+    _node_counter += 1
+
     # Leaf node: fall back to the heuristic evaluation.
     if depth == 0 or board.is_full():
         return evaluate(board, player), None
@@ -175,6 +199,7 @@ def alphabeta(
             alpha = max(alpha, best_score)
             # Prune: the minimizer above would never allow this path.
             if beta <= alpha:
+                _prune_counter += 1
                 break
 
         return best_score, best_move
@@ -198,6 +223,7 @@ def alphabeta(
         beta = min(beta, best_score)
         # Prune: the maximizer above would never choose this path.
         if beta <= alpha:
+            _prune_counter += 1
             break
 
     return best_score, best_move
