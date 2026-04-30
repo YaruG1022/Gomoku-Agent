@@ -1,7 +1,19 @@
 from __future__ import annotations
 import copy
+import random as _random
 
 BOARD_SIZE = 15
+
+# ---------------------------------------------------------------------------
+# Zobrist hashing tables  (generated once with a fixed seed for reproducibility)
+# ---------------------------------------------------------------------------
+_RNG = _random.Random(0x474F4D4F4B55)  # "GOMOKU" in hex
+_ZOBRIST: list[list[list[int]]] = [
+    [[_RNG.getrandbits(64) for _ in range(3)]   # indices 0=EMPTY(unused), 1=BLACK, 2=WHITE
+     for _ in range(BOARD_SIZE)]
+    for _ in range(BOARD_SIZE)
+]
+_ZOBRIST_TURN: list[int] = [0, _RNG.getrandbits(64), _RNG.getrandbits(64)]  # [0, BLACK_key, WHITE_key]
 
 EMPTY = 0
 BLACK = 1  # first player
@@ -21,10 +33,21 @@ class Board:
             [EMPTY] * BOARD_SIZE for _ in range(BOARD_SIZE)
         ]
         self.stone_count: int = 0
+        self._hash: int = 0  # Zobrist hash; updated incrementally
 
     # ------------------------------------------------------------------
     # Mutation helpers
     # ------------------------------------------------------------------
+
+    @property
+    def hash(self) -> int:
+        """Zobrist hash of the current position including side to move.
+
+        Side to move is inferred from *stone_count* parity (BLACK moves
+        when stone_count is even because BLACK always goes first).
+        """
+        side = BLACK if self.stone_count % 2 == 0 else WHITE
+        return self._hash ^ _ZOBRIST_TURN[side]
 
     def reset(self) -> None:
         """Clear every cell back to EMPTY."""
@@ -32,6 +55,7 @@ class Board:
             for col in range(self.size):
                 self.grid[row][col] = EMPTY
         self.stone_count = 0
+        self._hash = 0
 
     def place_stone(self, row: int, col: int, player: int) -> None:
         """Place *player*'s stone at (row, col).
@@ -44,6 +68,7 @@ class Board:
             raise ValueError(f"Cell ({row}, {col}) is already occupied.")
         self.grid[row][col] = player
         self.stone_count += 1  # track count to make is_full() O(1)
+        self._hash ^= _ZOBRIST[row][col][player]
 
     def remove_stone(self, row: int, col: int) -> None:
         """Remove the stone at (row, col) — used by search/undo to revert moves."""
@@ -51,6 +76,7 @@ class Board:
             raise ValueError(f"Position ({row}, {col}) is out of bounds.")
         if self.grid[row][col] == EMPTY:
             raise ValueError(f"Cell ({row}, {col}) is already empty.")
+        self._hash ^= _ZOBRIST[row][col][self.grid[row][col]]  # XOR out before clearing
         self.grid[row][col] = EMPTY
         self.stone_count -= 1
 
@@ -124,6 +150,7 @@ class Board:
         new_board = Board()
         new_board.grid = copy.deepcopy(self.grid)
         new_board.stone_count = self.stone_count
+        new_board._hash = self._hash
         return new_board
 
     def __repr__(self) -> str:  # pragma: no cover

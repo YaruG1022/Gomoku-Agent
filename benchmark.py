@@ -29,10 +29,11 @@ from gomoku.search import (
     get_node_count,
     get_prune_count,
     reset_counters,
+    reset_game_state,
 )
 
-TXT_FILE = "benchmark_results.txt"
-CSV_FILE = "benchmark_results.csv"
+TXT_FILE = "benchmark_{run_id}.txt"
+CSV_FILE = "benchmark_{run_id}.csv"
 
 CSV_COLUMNS = [
     "run_id",
@@ -109,6 +110,7 @@ def play_one_game(
     max_moves: int = 225,
 ) -> tuple[int, list[MoveStats], list[MoveStats]]:
     """Play a full AI-vs-AI game. Returns (winner, black_stats, white_stats)."""
+    reset_game_state()  # clear TT, killers, history for a clean game
     game = Game()
     black_stats: list[MoveStats] = []
     white_stats: list[MoveStats] = []
@@ -172,11 +174,11 @@ def _effective_branching_factor(total_nodes: float, num_moves: int, depth: int) 
 
 
 def _write_csv_row(csv_path: str, row: dict) -> None:
-    """Append a single row to the CSV file, creating headers if needed."""
-    file_exists = os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0
+    """Append a single row to the CSV file, writing the header if the file is new."""
+    write_header = not (os.path.isfile(csv_path) and os.path.getsize(csv_path) > 0)
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        if not file_exists:
+        if write_header:
             writer.writeheader()
         writer.writerow(row)
 
@@ -374,6 +376,10 @@ def main() -> None:
 
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_lines: list[str] = []
+
+    # Build per-run filenames (substituting run_id unless the user overrode them).
+    txt_path = args.output.replace("{run_id}", run_id)
+    csv_path = args.csv.replace("{run_id}", run_id)
     banner = (
         f"Gomoku AI-vs-AI Benchmark  (run_id={run_id})\n"
         f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -385,23 +391,23 @@ def main() -> None:
     single_matchup = args.black_depth is not None and args.white_depth is not None
 
     if single_matchup:
-        run_matchup(args.black_depth, args.white_depth, args.games, log_lines, run_id, args.csv)
+        run_matchup(args.black_depth, args.white_depth, args.games, log_lines, run_id, csv_path)
     else:
         depths = args.depths or [1, 2, 3, 4]
         log_lines.append(f"Depth matrix: {depths}  games_per_matchup={args.games}\n")
         print(f"Depth matrix: {depths}  games_per_matchup={args.games}\n")
-        run_depth_matrix(depths, args.games, log_lines, run_id, args.csv)
+        run_depth_matrix(depths, args.games, log_lines, run_id, csv_path)
 
     footer = f"Finished: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     log_lines.append(footer)
     print(footer)
 
-    with open(args.output, "a", encoding="utf-8") as f:
+    with open(txt_path, "w", encoding="utf-8") as f:
         f.write("\n".join(log_lines))
-        f.write("\n\n")
+        f.write("\n")
 
-    print(f"\nResults appended to {args.output}")
-    print(f"CSV data appended to {args.csv}")
+    print(f"\nResults written to {txt_path}")
+    print(f"CSV data written to  {csv_path}")
 
 
 if __name__ == "__main__":
