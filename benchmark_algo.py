@@ -43,8 +43,9 @@ from gomoku.search import (
 # ---------------------------------------------------------------------------
 # Output file names (stamped per run)
 # ---------------------------------------------------------------------------
-TXT_FILE = "benchmark_algo_{run_id}.txt"
-CSV_FILE = "benchmark_algo_{run_id}.csv"
+OUT_DIR  = "results/benchmark_algo"
+TXT_FILE = OUT_DIR + "/benchmark_algo_{run_id}.txt"
+CSV_FILE = OUT_DIR + "/benchmark_algo_{run_id}.csv"
 
 CSV_COLUMNS = [
     "run_id",
@@ -425,6 +426,7 @@ def main() -> None:
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     txt_path = args.output.replace("{run_id}", run_id)
     csv_path = args.csv.replace("{run_id}", run_id)
+    os.makedirs(os.path.dirname(txt_path), exist_ok=True)
     weights_json = json.dumps(get_weights(), sort_keys=True)
 
     log_lines: list[str] = []

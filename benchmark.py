@@ -33,8 +33,9 @@ from gomoku.search import (
     reset_game_state,
 )
 
-TXT_FILE = "benchmark_{run_id}.txt"
-CSV_FILE = "benchmark_{run_id}.csv"
+OUT_DIR  = "results/benchmark"
+TXT_FILE = OUT_DIR + "/benchmark_{run_id}.txt"
+CSV_FILE = OUT_DIR + "/benchmark_{run_id}.csv"
 
 CSV_COLUMNS = [
     "run_id",
@@ -401,6 +402,7 @@ def main() -> None:
     # Build per-run filenames (substituting run_id unless the user overrode them).
     txt_path = args.output.replace("{run_id}", run_id)
     csv_path = args.csv.replace("{run_id}", run_id)
+    os.makedirs(os.path.dirname(txt_path), exist_ok=True)
     banner = (
         f"Gomoku AI-vs-AI Benchmark  (run_id={run_id})\n"
         f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"

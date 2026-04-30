@@ -22,10 +22,16 @@ import numpy as np
 # Data loading
 # ---------------------------------------------------------------------------
 
+PLOTS_DIR = "results/plots"
+ALGO_DIR  = "results/benchmark_algo"
+
 def _latest_csv() -> str:
-    files = sorted(glob.glob("benchmark_algo_*.csv"))
+    files = sorted(glob.glob(os.path.join(ALGO_DIR, "benchmark_algo_*.csv")))
     if not files:
-        raise FileNotFoundError("No benchmark_algo_*.csv file found in current directory.")
+        # fallback: current directory
+        files = sorted(glob.glob("benchmark_algo_*.csv"))
+    if not files:
+        raise FileNotFoundError("No benchmark_algo_*.csv file found.")
     return files[-1]
 
 
@@ -162,7 +168,9 @@ def plot(data: dict[int, dict], csv_path: str) -> None:
 
     fig.tight_layout()
 
-    out_path = os.path.splitext(csv_path)[0] + "_plot.png"
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(csv_path))[0]
+    out_path = os.path.join(PLOTS_DIR, stem + "_plot.png")
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     print(f"Plot saved → {out_path}")
     plt.show()
