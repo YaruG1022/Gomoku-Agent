@@ -168,6 +168,9 @@ def minimax(
     we score from; *maximizing_player* indicates whose turn it is in
     the current node.
     """
+    global _node_counter
+    _node_counter += 1
+
     # Leaf node: evaluate the board position with the heuristic.
     if depth == 0 or board.is_full():
         return int(evaluate(board, player)), None

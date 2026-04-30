@@ -5,7 +5,7 @@ Results are logged to benchmark_results.txt (human-readable) and
 benchmark_results.csv (machine-readable, one row per game).
 
 Usage:
-    python benchmark.py                                         # default: depths 1-4, 3 games each
+    python benchmark.py                                         # default: depths 1-3, 3 games each
     python benchmark.py --depths 1 2 3 4 5 --games 10
     python benchmark.py --black-depth 3 --white-depth 2 --games 20
     python benchmark.py --weights open_four=120000 rush_four=10000  # override heuristic weights
@@ -414,7 +414,7 @@ def main() -> None:
     if single_matchup:
         run_matchup(args.black_depth, args.white_depth, args.games, log_lines, run_id, csv_path)
     else:
-        depths = args.depths or [1, 2, 3, 4]
+        depths = args.depths or [1, 2, 3]
         log_lines.append(f"Depth matrix: {depths}  games_per_matchup={args.games}\n")
         print(f"Depth matrix: {depths}  games_per_matchup={args.games}\n")
         run_depth_matrix(depths, args.games, log_lines, run_id, csv_path)
