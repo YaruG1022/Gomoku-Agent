@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 import sys
 from typing import Optional
 
@@ -100,6 +102,42 @@ def draw_board(screen: pygame.Surface, game: Game, font: pygame.font.Font) -> tu
     return restart_btn, undo_btn
 
 
+def draw_mode_selection(
+    screen: pygame.Surface,
+    font_title: pygame.font.Font,
+    font_btn: pygame.font.Font,
+) -> tuple[pygame.Rect, pygame.Rect]:
+    """Render the mode-selection menu and return the two button rects."""
+    screen.fill(BACKGROUND_COLOR)
+
+    cx = WINDOW_SIZE // 2
+    cy = (WINDOW_SIZE + STATUS_HEIGHT) // 2
+
+    title_surf = font_title.render("Gomoku Agent", True, TEXT_COLOR)
+    screen.blit(title_surf, title_surf.get_rect(center=(cx, cy - 160)))
+
+    sub_surf = font_btn.render("Select Game Mode", True, LINE_COLOR)
+    screen.blit(sub_surf, sub_surf.get_rect(center=(cx, cy - 90)))
+
+    btn_w, btn_h = 280, 60
+    pvai_btn = pygame.Rect(cx - btn_w // 2, cy - 20, btn_w, btn_h)
+    aiai_btn = pygame.Rect(cx - btn_w // 2, cy + 70, btn_w, btn_h)
+
+    mouse_pos = pygame.mouse.get_pos()
+    for btn, label, desc in [
+        (pvai_btn, "Player vs AI", "You play as Black"),
+        (aiai_btn, "AI vs AI", "Run benchmark in terminal"),
+    ]:
+        color = BUTTON_HOVER_COLOR if btn.collidepoint(mouse_pos) else BUTTON_COLOR
+        pygame.draw.rect(screen, color, btn, border_radius=8)
+        label_surf = font_btn.render(label, True, BUTTON_TEXT_COLOR)
+        screen.blit(label_surf, label_surf.get_rect(center=btn.center))
+        desc_surf = pygame.font.SysFont("segoeui", 16).render(desc, True, LINE_COLOR)
+        screen.blit(desc_surf, desc_surf.get_rect(center=(cx, btn.bottom + 12)))
+
+    return pvai_btn, aiai_btn
+
+
 def screen_to_move(position: tuple[int, int], board_size: int) -> Optional[tuple[int, int]]:
     x_pos, y_pos = position
     if x_pos < GRID_MARGIN - 18 or x_pos > WINDOW_SIZE - GRID_MARGIN + 18:
@@ -121,7 +159,32 @@ def main() -> None:
     screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + STATUS_HEIGHT))
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("segoeui", 24)
+    font_title = pygame.font.SysFont("segoeui", 52, bold=True)
 
+    # ── Mode selection ────────────────────────────────────────────────
+    selected_mode: Optional[str] = None
+    while selected_mode is None:
+        pvai_btn, aiai_btn = draw_mode_selection(screen, font_title, font)
+        pygame.display.flip()
+        clock.tick(60)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit(0)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if pvai_btn.collidepoint(event.pos):
+                    selected_mode = "pvai"
+                elif aiai_btn.collidepoint(event.pos):
+                    selected_mode = "aiai"
+
+    if selected_mode == "aiai":
+        pygame.quit()
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        benchmark_path = os.path.join(script_dir, "benchmark.py")
+        subprocess.run([sys.executable, benchmark_path], cwd=script_dir)
+        return
+
+    # ── Player vs AI ──────────────────────────────────────────────────
     game = Game()
     human_player = BLACK
     ai_player = WHITE
