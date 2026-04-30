@@ -17,11 +17,12 @@ import argparse
 import csv
 import json
 import os
+import random
 import time
 from datetime import datetime
 from typing import Optional
 
-from gomoku.board import BLACK, EMPTY, WHITE
+from gomoku.board import BLACK, BOARD_SIZE, EMPTY, WHITE
 from gomoku.game import Game
 from gomoku.heuristic import get_weights, reset_weights, set_weights
 from gomoku.search import (
@@ -108,12 +109,32 @@ def play_one_game(
     black_depth: int,
     white_depth: int,
     max_moves: int = 225,
+    seed: Optional[int] = None,
 ) -> tuple[int, list[MoveStats], list[MoveStats]]:
-    """Play a full AI-vs-AI game. Returns (winner, black_stats, white_stats)."""
+    """Play a full AI-vs-AI game. Returns (winner, black_stats, white_stats).
+
+    If *seed* is given, Black's first move is chosen randomly from the
+    centre 5×5 region instead of by search.  This breaks the total
+    determinism that otherwise makes every repeated game identical,
+    so that multi-game matchups yield meaningful statistical variance.
+    """
     reset_game_state()  # clear TT, killers, history for a clean game
     game = Game()
     black_stats: list[MoveStats] = []
     white_stats: list[MoveStats] = []
+
+    # Random opening move so each game starts from a distinct position.
+    if seed is not None:
+        rng = random.Random(seed)
+        half = BOARD_SIZE // 2
+        opening_pool = [
+            (half + dr, half + dc)
+            for dr in range(-2, 3)
+            for dc in range(-2, 3)
+        ]
+        row, col = rng.choice(opening_pool)
+        game.make_move(row, col)
+        # No search was performed for this move; don't pollute efficiency stats.
 
     for _ in range(max_moves):
         if game.is_over():
@@ -204,7 +225,7 @@ def run_matchup(
 
     for i in range(1, num_games + 1):
         t0 = time.perf_counter()
-        winner, b_stats, w_stats = play_one_game(black_depth, white_depth)
+        winner, b_stats, w_stats = play_one_game(black_depth, white_depth, seed=i)
         game_time = time.perf_counter() - t0
         results[winner] += 1
         all_black_stats.extend(b_stats)
