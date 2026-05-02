@@ -1,29 +1,40 @@
 # Gomoku-Agent
 
 A Python-based Gomoku (Five-in-a-Row) game-playing agent featuring a depth-limited
-Minimax search with Alpha-Beta pruning and a pattern-based heuristic evaluation
-function, playable on a 15×15 board.
+Minimax search with Alpha-Beta pruning, Transposition Table, Killer-Move, and
+History heuristics, backed by a pattern-based evaluation function.
+Playable on a 15×15 board.
+
+## Demo
+
+Interactive demo notebook (Google Colab):
+[`demo.ipynb`](demo.ipynb) — shows how to install, run the AI headlessly, execute tests, and reproduce all benchmark results.
 
 ## Project Structure
 
 ```
 Gomoku-Agent/
-├── gomoku/              # Core package
+├── gomoku/                    # Core package
 │   ├── __init__.py
-│   ├── board.py         # Board representation, move validation, win/draw detection
-│   ├── heuristic.py     # Pattern-based heuristic evaluation function
-│   ├── move_gen.py      # Candidate move generation (near existing stones)
-│   ├── search.py        # Minimax algorithm with Alpha-Beta pruning
-│   └── game.py          # Human-vs-AI game loop interface
-├── tests/               # Unit tests
-│   ├── __init__.py
+│   ├── board.py               # Board representation, Zobrist hashing, win/draw detection
+│   ├── heuristic.py           # Pattern-based heuristic evaluation (open/rush fours, threes, …)
+│   ├── move_gen.py            # Candidate move generation (neighbour radius)
+│   ├── search.py              # Minimax + Alpha-Beta + TT + Killer + History
+│   └── game.py                # Game state manager (move, undo, win/draw detection)
+├── tests/                     # Unit tests
 │   ├── test_board.py
 │   ├── test_heuristic.py
 │   ├── test_move_gen.py
 │   └── test_search.py
-├── main.py              # Entry point
-├── requirements.txt     # Runtime + development dependencies
-└── pyproject.toml       # Project metadata and tooling configuration
+├── main.py                    # pygame GUI entry point
+├── performance_metrics.py     # Experiment 1: decision time, win-rate, game length
+├── benchmark.py               # Experiment 2: AI-vs-AI depth matrix benchmark
+├── benchmark_algo.py          # Experiment 3: Minimax vs Alpha-Beta comparison
+├── analyze.py                 # Analyze & print benchmark.py results
+├── analyze_algo.py            # Visualize benchmark_algo.py results (matplotlib)
+├── results/                   # Saved benchmark outputs (CSV + TXT)
+├── requirements.txt           # Runtime + development dependencies
+└── pyproject.toml             # Project metadata and tooling configuration
 ```
 
 ## Setup
@@ -31,11 +42,15 @@ Gomoku-Agent/
 **Prerequisites:** Python 3.10 or newer.
 
 ```bash
-# 1. Create and activate a virtual environment
+# 1. Clone the repository
+git clone https://github.com/YaruG1022/Gomoku-Agent.git
+cd Gomoku-Agent
+
+# 2. Create and activate a virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-# 2. Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -45,12 +60,53 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Controls: left click to place a stone, `R` to restart, `U` to undo the last full turn.
+On launch a **mode-selection menu** appears:
 
-The current local UI uses `pygame` for a native desktop window. The built-in AI is a minimal opponent that prefers immediate wins, blocks immediate losses, and otherwise plays near the center. This keeps the project playable while the full search and heuristic modules are still under development.
+| Mode | Description |
+|---|---|
+| **Player vs AI** | You play as Black; AI (White, depth-3 Alpha-Beta) responds automatically |
+| **AI vs AI** | Launches `benchmark.py` as a subprocess |
+
+**Controls (Player vs AI):**
+
+| Action | Input |
+|---|---|
+| Place a stone | Left-click a grid intersection |
+| Undo last full turn | Click **Undo** · or press `U` / `Backspace` |
+| Restart | Click **Restart** · or press `R` / `Escape` |
 
 ## Running Tests
 
 ```bash
-pytest
+pytest tests/ -v
+```
+
+## Experiment Scripts
+
+### Experiment 1 — Performance Metrics
+
+Measures AI decision time, win rate vs a random player, and average game length.
+
+```bash
+python performance_metrics.py
+```
+
+### Experiment 2 — AI vs AI Benchmark
+
+Runs AI-vs-AI games across all depth combinations and reports win-rate matrix and
+search efficiency (nodes, pruning rate, EBF). Results saved to `results/benchmark/`.
+
+```bash
+python benchmark.py --depths 1 2 3 --games 3
+python analyze.py --csv results/benchmark/<latest>.csv
+```
+
+### Experiment 3 — Minimax vs Alpha-Beta
+
+Compares plain Minimax against Alpha-Beta at equal depth, quantifying node reduction,
+pruning rate, and speedup. Results saved to `results/benchmark_algo/`.
+
+```bash
+python benchmark_algo.py --depths 1 2 3 --games 3
+python analyze_algo.py results/benchmark_algo/<latest>.csv
 ```
